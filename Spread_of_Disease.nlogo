@@ -1,3 +1,4 @@
+globals [hours infected-y]
 turtles-own [
   infected?    ;; has the person been infected with the disease?
 ]
@@ -12,6 +13,8 @@ to setup
   make-turtles
   infect
   recolor
+  set hours 0
+  set infected-y (count turtles with [ infected? ])
   reset-ticks
 end
 
@@ -44,6 +47,11 @@ to go
   spread-infection
   recolor
   move
+  set hours hours + 1
+  if (hours mod 24) = 0 [
+    update-r0-plot
+    set infected-y count turtles with [ infected? ]
+  ]
   tick
 end
 
@@ -64,6 +72,11 @@ to move
   ]
 end
 
+to update-r0-plot
+  set-current-plot-pen "r0"
+  plot (count turtles with [infected?]) / (infected-y)
+end
+
 ;; This procedure allows you to run the model multiple times
 ;; and measure how long it takes for the disease to spread to
 ;; all people in each run. For more complex experiments, you
@@ -82,9 +95,9 @@ end
 ; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
-395
+390
 10
-854
+849
 470
 -1
 -1
@@ -151,7 +164,7 @@ num-people
 num-people
 2
 500
-210.0
+204.0
 1
 1
 NIL
@@ -183,7 +196,7 @@ num-infected
 num-infected
 0
 num-people
-6.0
+3.0
 1
 1
 NIL
@@ -191,9 +204,9 @@ HORIZONTAL
 
 PLOT
 10
-205
-381
-470
+165
+295
+360
 Infection vs. Time
 Time
 NIL
@@ -217,6 +230,35 @@ count turtles with [ infected? ]
 3
 1
 11
+
+MONITOR
+105
+110
+162
+155
+NIL
+hours
+17
+1
+11
+
+PLOT
+10
+375
+295
+535
+R0 vs. Day
+day
+R0
+0.0
+7.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"r0" 1.0 0 -5825686 true "" ""
 
 @#$#@#$#@
 ## ACKNOWLEDGMENT
