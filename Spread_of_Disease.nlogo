@@ -2,11 +2,6 @@ turtles-own [
   infected?    ;; has the person been infected with the disease?
 ]
 
-patches-own [
-  p-infected?  ;; in the environmental variant, has the patch been infected?
-  infect-time  ;; how long until the end of the patch infection?
-]
-
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Setup Procedures ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -15,10 +10,8 @@ to setup
   clear-all
   set-default-shape turtles "person"
   make-turtles
-  ask patches [ set p-infected? false ]
   infect
   recolor
-  if variant = "network" [ make-network ]
   reset-ticks
 end
 
@@ -29,24 +22,9 @@ to make-turtles
   ]
 end
 
-to make-network
-  repeat connections-per-node * count turtles / 2 [
-    ;; pick a random missing edge and create it
-    ask one-of turtles [
-      create-link-with one-of other turtles with [ not link-neighbor? myself ]
-    ]
-  ]
-  layout-circle turtles max-pxcor - 1
-  repeat 20 [ do-layout ]
-end
-
 to infect
   ask n-of num-infected turtles [
     set infected? true
-    if variant = "environmental" [
-      ;; the patch under an infected turtle becomes infected:
-      set p-infected? true
-    ]
   ]
 end
 
@@ -54,10 +32,6 @@ to recolor
   ask turtles [
     ;; infected turtles are red, others are gray
     set color ifelse-value infected? [ red ] [ gray ]
-  ]
-  ask patches [
-    ;; infected patches are yellow, others are black
-    set pcolor ifelse-value p-infected? [ yellow ] [ black ]
   ]
 end
 
@@ -74,32 +48,8 @@ to go
 end
 
 to spread-infection
-  ask patches with [ p-infected? ] [
-    ;; count down to the end of the patch infection
-    set infect-time infect-time - 1
-  ]
   ask turtles with [ infected? ] [
-    ifelse variant = "network" [
-      ;; in the network variant, the disease spreads through links
-      ask link-neighbors [ set infected? true ]
-    ]
-    [ ;; in other variants, the disease spreads spatially
       ask turtles-here [ set infected? true ]
-      if variant = "environmental" [
-        ;; in the environmental variant, it spreads to patches as well
-        set p-infected? true
-        set infect-time disease-decay
-      ]
-    ]
-  ]
-  if variant = "environmental" [
-    ;; the turtles that are on an infected patch become infected
-    ask turtles with [ p-infected? ] [
-      set infected? true
-    ]
-  ]
-  ask patches with [ p-infected? and infect-time <= 0 ] [
-    set p-infected? false
   ]
 end
 
@@ -107,23 +57,11 @@ end
 ;;; Layout ;;;
 ;;;;;;;;;;;;;;
 to move
-  ifelse variant = "network" [
-    ;; the number 10 here is arbitrary; more repetitions slows down the
-    ;; model, but too few gives poor layouts
-    repeat 10 [ do-layout ]
+  ask turtles [
+    fd 1
+    rt random 30
+    lt random 30
   ]
-  [ ;; in non network variants, persons move around randomly
-    ask turtles [
-      fd 1
-      rt random 30
-      lt random 30
-    ]
-  ]
-end
-
-to do-layout
-  layout-spring turtles with [ any? link-neighbors ] links 0.4 6 1
-  display  ;; so we get smooth animation
 end
 
 ;; This procedure allows you to run the model multiple times
@@ -144,10 +82,10 @@ end
 ; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
-393
-17
-852
-477
+395
+10
+854
+470
 -1
 -1
 11.0
@@ -171,10 +109,10 @@ ticks
 30.0
 
 BUTTON
-100
-110
-180
-145
+10
+10
+90
+45
 setup
 setup
 NIL
@@ -189,9 +127,9 @@ NIL
 
 BUTTON
 100
-150
+10
 180
-185
+45
 go
 go
 T
@@ -213,17 +151,17 @@ num-people
 num-people
 2
 500
-200.0
+210.0
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
+190
 10
-150
-90
-185
+270
+45
 go once
 go
 NIL
@@ -236,38 +174,6 @@ NIL
 NIL
 0
 
-BUTTON
-10
-190
-180
-223
-redo layout
-do-layout
-T
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-0
-
-SLIDER
-190
-150
-380
-183
-connections-per-node
-connections-per-node
-0
-5.0
-1.2
-0.1
-1
-NIL
-HORIZONTAL
-
 SLIDER
 10
 60
@@ -277,7 +183,7 @@ num-infected
 num-infected
 0
 num-people
-3.0
+6.0
 1
 1
 NIL
@@ -285,9 +191,9 @@ HORIZONTAL
 
 PLOT
 10
-235
+205
 381
-500
+470
 Infection vs. Time
 Time
 NIL
@@ -297,45 +203,20 @@ NIL
 1.0
 true
 true
-"" "if variant = \"environmental\" [\n  create-temporary-plot-pen \"patches\"\n  plotxy ticks count patches with [ p-infected? ] / count patches\n]"
+"" ""
 PENS
 "people" 1.0 0 -5298144 true "" "plot count turtles with [ infected? ] / count turtles"
 
 MONITOR
 10
-100
+110
 90
-145
+155
 Infected
 count turtles with [ infected? ]
 3
 1
 11
-
-CHOOSER
-10
-10
-180
-55
-variant
-variant
-"mobile" "network" "environmental"
-1
-
-SLIDER
-190
-190
-380
-223
-disease-decay
-disease-decay
-0
-10
-10.0
-1
-1
-ticks
-HORIZONTAL
 
 @#$#@#$#@
 ## ACKNOWLEDGMENT
