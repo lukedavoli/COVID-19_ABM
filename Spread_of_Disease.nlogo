@@ -1,6 +1,23 @@
-globals [hours infected-y]
+globals [
+  hours ;; hours since the beginning of the simulation
+  infected-y ;; turtles infected at the end of the prior day
+  region-boundaries-x ;; a list of regions definitions, where each region is a list of its min pxcor and max pxcor
+  region-boundaries-y
+]
+
 turtles-own [
   infected?    ;; has the person been infected with the disease?
+  worker?
+  home-patch
+  workplace
+  hours-worked-today
+  hours-shopped-today
+]
+
+patches-own [
+  region-x
+  region-y
+  region-type
 ]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -9,6 +26,7 @@ turtles-own [
 
 to setup
   clear-all
+  setup-regions number-of-regions-squared
   set-default-shape turtles "person"
   make-turtles
   infect
@@ -18,10 +36,111 @@ to setup
   reset-ticks
 end
 
+to setup-regions [ num-regions ]
+  foreach region-divisions-x num-regions draw-region-division-x
+  foreach region-divisions-y num-regions draw-region-division-y
+
+  set region-boundaries-x calculate-region-boundaries-x num-regions
+  set region-boundaries-y calculate-region-boundaries-y num-regions
+
+  let region-numbers-x (range 1 (num-regions + 1))
+  (foreach region-boundaries-x region-numbers-x [ [boundaries region-number] ->
+    ask patches with [ pxcor >= first boundaries and pxcor <= last boundaries ] [
+      set region-x region-number
+    ]
+  ])
+  let region-numbers-y (range 1 (num-regions + 1))
+  (foreach region-boundaries-y region-numbers-y [ [boundaries region-number] ->
+    ask patches with [ pycor >= first boundaries and pycor <= last boundaries ] [
+      set region-y region-number
+    ]
+  ])
+  ask patches with [region-y > (num-regions / 4) and pcolor != 6.5][
+   set pcolor 34
+   set region-type "home"
+  ]
+  ask patches with [region-y <= (num-regions / 4) and region-x > (num-regions / 4) and pcolor != 6.5][
+   set pcolor 104
+   set region-type "workplace"
+  ]
+  ask patches with [region-y <= (num-regions / 4) and region-x <= (num-regions / 4) and pcolor != 6.5][
+   set pcolor 114
+   set region-type "shop"
+  ]
+end
+
+to-report calculate-region-boundaries-x [ num-regions ]
+  let divisions-x region-divisions-x num-regions
+  report (map [ [d1 d2] -> list (d1 + 1) (d2 - 1) ] (but-last divisions-x) (but-first divisions-x))
+end
+
+to-report calculate-region-boundaries-y [ num-regions ]
+  let divisions-y region-divisions-y num-regions
+  report (map [ [d1 d2] -> list (d1 + 1) (d2 - 1) ] (but-last divisions-y) (but-first divisions-y))
+end
+
+to-report region-divisions-x [ num-regions ]
+  report n-values (num-regions + 1) [ n ->
+    [ pxcor ] of patch (min-pxcor + (n * ((max-pxcor - min-pxcor) / num-regions))) 0
+  ]
+end
+
+to-report region-divisions-y [ num-regions ]
+  report n-values (num-regions + 1) [ n ->
+    [ pycor ] of patch 0 (min-pycor + (n * ((max-pycor - min-pycor) / num-regions)))
+  ]
+end
+
+to draw-region-division-x [ x ]
+  ask patches with [ pxcor = x ] [
+    set pcolor grey + 1.5
+  ]
+  create-turtles 1 [
+    setxy x max-pycor + 0.5
+    set heading 0
+    set color grey - 3
+    pen-down
+    forward world-height
+    set xcor xcor + 1 / patch-size
+    right 180
+    set color grey + 3
+    forward world-height
+    die
+  ]
+end
+
+to draw-region-division-y [ y ]
+  ask patches with [ pycor = y ] [
+    set pcolor grey + 1.5
+  ]
+  create-turtles 1 [
+    setxy max-pxcor + 0.5 y
+    set heading 90
+    set color grey - 3
+    pen-down
+    forward world-width
+    set ycor ycor + 1 / patch-size
+    right 90
+    set color grey + 3
+    forward world-width
+    die
+  ]
+end
+
 to make-turtles
   create-turtles num-people [
     set infected? false
     setxy random-xcor random-ycor
+    set home-patch one-of patches with [region-type = "home"]
+    set hours-worked-today 0
+    set hours-shopped-today 0
+    move-to home-patch
+    ifelse random 100 < employment-rate[ ;; 80% chance of employment, accounting for below legal working age
+      set worker? false
+    ][
+      set worker? true
+      set workplace one-of patches with [region-type = "workplace"]
+    ]
   ]
 end
 
@@ -46,6 +165,7 @@ to go
   if all? turtles [ infected? ] [ stop ]
   spread-infection
   recolor
+  ask turtles [travel]
   move
   set hours hours + 1
   if (hours mod 24) = 0 [
@@ -53,6 +173,45 @@ to go
     set infected-y count turtles with [ infected? ]
   ]
   tick
+end
+
+to travel
+
+  if (hours mod 24) >= 7 and (hours mod 24) < 12 and worker? = true[
+    ;; Intention for workers to have a roughly 70% chance of going to work on any given day,
+    ;; so they are given a 14% chance on 5 opportunities between 7am and 11am to head to work
+    if random 100 < 14[
+      move-to workplace
+    ]
+  ]
+
+  if (hours mod 24) >= 7 and (hours mod 24) < 17 and worker? = false[
+    ;; Intention for non-workers to have a roughly 40% chance of going to the shops on any given day,
+    ;; so they are given a 3% chance on 10 opportunities between 7am and 5pm to head to the shops
+    if random 100 < 4[
+      move-to one-of patches with [pcolor = 114]
+    ]
+  ]
+
+  if pcolor = 104[set hours-worked-today hours-worked-today + 1]
+  if pcolor = 114[set hours-shopped-today hours-shopped-today + 1]
+
+  if pcolor = 104 and hours-worked-today = 6[
+    ;; Intention for workers have a roughly 20% chance of going to the shops after work
+    ifelse random 100 < 20[
+      move-to one-of patches with [pcolor = 114]
+    ][
+      move-to home-patch
+    ]
+    set hours-worked-today 0
+
+  ]
+
+  if pcolor = 114 and hours-shopped-today = 3[
+    move-to home-patch
+    set hours-shopped-today 0
+  ]
+
 end
 
 to spread-infection
@@ -66,15 +225,25 @@ end
 ;;;;;;;;;;;;;;
 to move
   ask turtles [
-    fd 1
-    rt random 30
-    lt random 30
+    bounce
+    fd 0.5
   ]
+end
+
+to bounce
+  ; check: hitting left or right wall?
+  if [region-x] of patch-ahead 1 = 0
+    ; if so, reflect heading around x axis
+    [ set heading (- heading) ]
+  ; check: hitting top or bottom wall?
+  if [region-y] of patch-ahead 1 = 0
+    ; if so, reflect heading around y axis
+    [ set heading (180 - heading) ]
 end
 
 to update-r0-plot
   set-current-plot-pen "r0"
-  plot (count turtles with [infected?]) / (infected-y)
+  plot ((count turtles with [infected?]) / (infected-y)) - 1
 end
 
 ;; This procedure allows you to run the model multiple times
@@ -95,13 +264,13 @@ end
 ; See Info tab for full copyright and license.
 @#$#@#$#@
 GRAPHICS-WINDOW
-390
+395
 10
-849
-470
+989
+605
 -1
 -1
-11.0
+7.235
 1
 10
 1
@@ -111,10 +280,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--20
-20
--20
-20
+-40
+40
+-40
+40
 1
 1
 1
@@ -123,9 +292,9 @@ ticks
 
 BUTTON
 10
-10
+100
 90
-45
+135
 setup
 setup
 NIL
@@ -140,9 +309,9 @@ NIL
 
 BUTTON
 100
-10
+100
 180
-45
+135
 go
 go
 T
@@ -157,14 +326,14 @@ NIL
 
 SLIDER
 190
-60
+10
 380
-93
+43
 num-people
 num-people
 2
 500
-204.0
+440.0
 1
 1
 NIL
@@ -172,9 +341,9 @@ HORIZONTAL
 
 BUTTON
 190
-10
+100
 270
-45
+135
 go once
 go
 NIL
@@ -189,14 +358,14 @@ NIL
 
 SLIDER
 10
-60
+10
 180
-93
+43
 num-infected
 num-infected
 0
 num-people
-3.0
+5.0
 1
 1
 NIL
@@ -204,9 +373,9 @@ HORIZONTAL
 
 PLOT
 10
-165
+250
 295
-360
+445
 Infection vs. Time
 Time
 NIL
@@ -221,10 +390,10 @@ PENS
 "people" 1.0 0 -5298144 true "" "plot count turtles with [ infected? ] / count turtles"
 
 MONITOR
-10
-110
-90
-155
+305
+250
+385
+295
 Infected
 count turtles with [ infected? ]
 3
@@ -232,10 +401,10 @@ count turtles with [ infected? ]
 11
 
 MONITOR
-105
-110
-162
-155
+305
+305
+385
+350
 NIL
 hours
 17
@@ -244,21 +413,51 @@ hours
 
 PLOT
 10
-375
+460
 295
-535
+620
 R0 vs. Day
 day
 R0
 0.0
 7.0
 0.0
-10.0
+1.0
 true
 false
 "" ""
 PENS
 "r0" 1.0 0 -5825686 true "" ""
+
+SLIDER
+10
+55
+180
+88
+number-of-regions-squared
+number-of-regions-squared
+4
+20
+12.0
+4
+1
+NIL
+HORIZONTAL
+
+SLIDER
+190
+55
+380
+88
+employment-rate
+employment-rate
+1
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## ACKNOWLEDGMENT
