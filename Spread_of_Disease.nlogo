@@ -18,6 +18,7 @@ turtles-own [
   incubation-hours
   asymptomatic-hours
   recovery-hours
+  chance-leave
 ]
 
 patches-own [
@@ -141,6 +142,7 @@ to make-turtles
     set home-patch one-of patches with [region-type = "home"]
     set hours-worked-today 0
     set hours-shopped-today 0
+    set chance-leave 100
     move-to home-patch
     ifelse random 100 < employment-rate[ ;; 80% chance of employment, accounting for below legal working age
       set worker? false
@@ -204,31 +206,34 @@ to update-infection-status
     ]
     if infected-hours > incubation-hours[
       set color red
+      if infected-hours = incubation-hours + 1[set chance-leave random 100]
     ]
     if infected-hours > recovery-hours[
       set color green
       set infected? false
       set infectious? false
       set infected-hours 0
+      set chance-leave 100
     ]
   ]
 end
 
 to travel
-
-  if (hours mod 24) >= 7 and (hours mod 24) < 12 and worker? = true[
-    ;; Intention for workers to have a roughly 70% chance of going to work on any given day,
-    ;; so they are given a 14% chance on 5 opportunities between 7am and 11am to head to work
-    if random 100 < 14[
-      move-to workplace
+  if chance-leave > sick-leave-threshold[
+    if (hours mod 24) >= 7 and (hours mod 24) < 12 and worker? = true[
+      ;; Intention for workers to have a roughly 70% chance of going to work on any given day,
+      ;; so they are given a 14% chance on 5 opportunities between 7am and 11am to head to work
+      if random 100 < 14[
+        move-to workplace
+      ]
     ]
-  ]
 
-  if (hours mod 24) >= 7 and (hours mod 24) < 17 and worker? = false[
-    ;; Intention for non-workers to have a roughly 40% chance of going to the shops on any given day,
-    ;; so they are given a 3% chance on 10 opportunities between 7am and 5pm to head to the shops
-    if random 100 < 4[
-      move-to one-of patches with [pcolor = 114]
+    if (hours mod 24) >= 7 and (hours mod 24) < 17 and worker? = false[
+      ;; Intention for non-workers to have a roughly 40% chance of going to the shops on any given day,
+      ;; so they are given a 3% chance on 10 opportunities between 7am and 5pm to head to the shops
+      if random 100 < 4[
+        move-to one-of patches with [pcolor = 114]
+      ]
     ]
   ]
 
@@ -334,9 +339,9 @@ ticks
 
 BUTTON
 10
-100
+150
 90
-135
+185
 setup
 setup
 NIL
@@ -351,9 +356,9 @@ NIL
 
 BUTTON
 100
-100
+150
 180
-135
+185
 go
 go
 T
@@ -383,9 +388,9 @@ HORIZONTAL
 
 BUTTON
 190
-100
+150
 270
-135
+185
 go once
 go
 NIL
@@ -415,9 +420,9 @@ HORIZONTAL
 
 PLOT
 10
-147
+190
 295
-342
+385
 Infection vs. Time
 Time
 NIL
@@ -432,10 +437,10 @@ PENS
 "people" 1.0 0 -5298144 true "" "plot count turtles with [ infected? ] / count turtles"
 
 MONITOR
-302
-148
-382
-193
+305
+190
+385
+235
 Infected
 count turtles with [ infected? ]
 3
@@ -443,10 +448,10 @@ count turtles with [ infected? ]
 11
 
 MONITOR
-302
-203
-382
-248
+305
+245
+385
+290
 NIL
 hours
 17
@@ -455,9 +460,9 @@ hours
 
 PLOT
 10
-358
+395
 380
-478
+515
 R0 vs. Day
 day
 R0
@@ -503,9 +508,9 @@ HORIZONTAL
 
 PLOT
 10
-487
+520
 381
-637
+670
 State of Disease
 NIL
 NIL
@@ -522,6 +527,21 @@ PENS
 "asymptomatic" 1.0 0 -955883 true "" "plot count turtles with [color = orange]"
 "infectious" 1.0 0 -2674135 true "" "plot count turtles with [color = red]"
 "recovered" 1.0 0 -13840069 true "" "plot count turtles with [color = green]"
+
+SLIDER
+10
+105
+180
+138
+sick-leave-threshold
+sick-leave-threshold
+1
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## ACKNOWLEDGMENT
