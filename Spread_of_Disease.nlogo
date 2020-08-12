@@ -3,6 +3,7 @@ globals [
   infected-y ;; turtles infected at the end of the prior day
   region-boundaries-x ;; a list of regions definitions, where each region is a list of its min pxcor and max pxcor
   region-boundaries-y
+  infected-today
 ]
 
 turtles-own [
@@ -12,6 +13,11 @@ turtles-own [
   workplace
   hours-worked-today
   hours-shopped-today
+  infectious?
+  infected-hours
+  incubation-hours
+  asymptomatic-hours
+  recovery-hours
 ]
 
 patches-own [
@@ -130,6 +136,7 @@ end
 to make-turtles
   create-turtles num-people [
     set infected? false
+    set infectious? false
     setxy random-xcor random-ycor
     set home-patch one-of patches with [region-type = "home"]
     set hours-worked-today 0
@@ -141,12 +148,17 @@ to make-turtles
       set worker? true
       set workplace one-of patches with [region-type = "workplace"]
     ]
+    set incubation-hours round random-normal 144 60
+    if incubation-hours < 1 [set incubation-hours 168]
+    set asymptomatic-hours (random 24 + 48)
+    set recovery-hours round (300 + abs random-normal 0 300)
   ]
 end
 
 to infect
   ask n-of num-infected turtles [
     set infected? true
+    set infected-hours 0
   ]
 end
 
@@ -164,15 +176,42 @@ end
 to go
   if all? turtles [ infected? ] [ stop ]
   spread-infection
-  recolor
-  ask turtles [travel]
+  ask turtles [
+    travel
+    update-infection-status
+  ]
   move
   set hours hours + 1
   if (hours mod 24) = 0 [
     update-r0-plot
     set infected-y count turtles with [ infected? ]
+    set infected-today 0
   ]
   tick
+end
+
+to update-infection-status
+  if infected? = true[
+    if infected-hours = 0 [set infected-today infected-today + 1]
+    set infected-hours infected-hours + 1
+
+    if infected-hours < incubation-hours - asymptomatic-hours [
+      set color yellow
+    ]
+    if infected-hours < incubation-hours and infected-hours > incubation-hours - asymptomatic-hours[
+      set color orange
+      set infectious? true
+    ]
+    if infected-hours > incubation-hours[
+      set color red
+    ]
+    if infected-hours > recovery-hours[
+      set color green
+      set infected? false
+      set infectious? false
+      set infected-hours 0
+    ]
+  ]
 end
 
 to travel
@@ -215,8 +254,10 @@ to travel
 end
 
 to spread-infection
-  ask turtles with [ infected? ] [
+  ask turtles with [ infected? ][
+    if infectious? = true[
       ask turtles-here [ set infected? true ]
+    ]
   ]
 end
 
@@ -226,24 +267,25 @@ end
 to move
   ask turtles [
     bounce
-    fd 0.5
+    fd 1
   ]
 end
 
 to bounce
   ; check: hitting left or right wall?
-  if [region-x] of patch-ahead 1 = 0
+  if [region-x] of patch-ahead 1.5 = 0
     ; if so, reflect heading around x axis
     [ set heading (- heading) ]
   ; check: hitting top or bottom wall?
-  if [region-y] of patch-ahead 1 = 0
+  if [region-y] of patch-ahead 1.5 = 0
     ; if so, reflect heading around y axis
     [ set heading (180 - heading) ]
 end
 
 to update-r0-plot
+  set-current-plot "R0 vs. Day"
   set-current-plot-pen "r0"
-  plot ((count turtles with [infected?]) / (infected-y)) - 1
+  plot (((infected-y + infected-today) / infected-y) - 1)
 end
 
 ;; This procedure allows you to run the model multiple times
@@ -333,7 +375,7 @@ num-people
 num-people
 2
 500
-440.0
+273.0
 1
 1
 NIL
@@ -365,7 +407,7 @@ num-infected
 num-infected
 0
 num-people
-5.0
+19.0
 1
 1
 NIL
@@ -373,9 +415,9 @@ HORIZONTAL
 
 PLOT
 10
-250
+147
 295
-445
+342
 Infection vs. Time
 Time
 NIL
@@ -390,10 +432,10 @@ PENS
 "people" 1.0 0 -5298144 true "" "plot count turtles with [ infected? ] / count turtles"
 
 MONITOR
-305
-250
-385
-295
+302
+148
+382
+193
 Infected
 count turtles with [ infected? ]
 3
@@ -401,10 +443,10 @@ count turtles with [ infected? ]
 11
 
 MONITOR
-305
-305
-385
-350
+302
+203
+382
+248
 NIL
 hours
 17
@@ -413,9 +455,9 @@ hours
 
 PLOT
 10
-460
-295
-620
+358
+380
+478
 R0 vs. Day
 day
 R0
@@ -424,7 +466,7 @@ R0
 0.0
 1.0
 true
-false
+true
 "" ""
 PENS
 "r0" 1.0 0 -5825686 true "" ""
@@ -458,6 +500,28 @@ employment-rate
 1
 NIL
 HORIZONTAL
+
+PLOT
+10
+487
+381
+637
+State of Disease
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"healthy" 1.0 0 -7500403 true "" "plot count turtles with [color = gray]"
+"incubation" 1.0 0 -1184463 true "" "plot count turtles with [color = yellow]"
+"asymptomatic" 1.0 0 -955883 true "" "plot count turtles with [color = orange]"
+"infectious" 1.0 0 -2674135 true "" "plot count turtles with [color = red]"
+"recovered" 1.0 0 -13840069 true "" "plot count turtles with [color = green]"
 
 @#$#@#$#@
 ## ACKNOWLEDGMENT
