@@ -4,6 +4,8 @@ globals [
   region-boundaries-x ;; a list of regions definitions, where each region is a list of its min pxcor and max pxcor
   region-boundaries-y
   infected-today
+  economic-contributors
+  economy
 ]
 
 turtles-own [
@@ -18,7 +20,7 @@ turtles-own [
   incubation-hours
   asymptomatic-hours
   recovery-hours
-  chance-leave
+  chance-travel-sick
 ]
 
 patches-own [
@@ -39,6 +41,7 @@ to setup
   infect
   recolor
   set hours 0
+  set economic-contributors 0
   set infected-y (count turtles with [ infected? ])
   reset-ticks
 end
@@ -142,13 +145,13 @@ to make-turtles
     set home-patch one-of patches with [region-type = "home"]
     set hours-worked-today 0
     set hours-shopped-today 0
-    set chance-leave 100
+    set chance-travel-sick 101
     move-to home-patch
-    ifelse random 100 < employment-rate[ ;; 80% chance of employment, accounting for below legal working age
-      set worker? false
-    ][
+    ifelse random 100 < employment-rate[
       set worker? true
       set workplace one-of patches with [region-type = "workplace"]
+    ][
+      set worker? false
     ]
     set incubation-hours round random-normal 144 60
     if incubation-hours < 1 [set incubation-hours 168]
@@ -186,6 +189,7 @@ to go
   set hours hours + 1
   if (hours mod 24) = 0 [
     update-r0-plot
+    update-economy
     set infected-y count turtles with [ infected? ]
     set infected-today 0
   ]
@@ -206,25 +210,26 @@ to update-infection-status
     ]
     if infected-hours > incubation-hours[
       set color red
-      if infected-hours = incubation-hours + 1[set chance-leave random 100]
+      if infected-hours = incubation-hours + 1[set chance-travel-sick random 100]
     ]
     if infected-hours > recovery-hours[
       set color green
       set infected? false
       set infectious? false
       set infected-hours 0
-      set chance-leave 100
+      set chance-travel-sick 101
     ]
   ]
 end
 
 to travel
-  if chance-leave > sick-leave-threshold[
+  if chance-travel-sick > travel-sick-threshold[
     if (hours mod 24) >= 7 and (hours mod 24) < 12 and worker? = true[
       ;; Intention for workers to have a roughly 70% chance of going to work on any given day,
       ;; so they are given a 14% chance on 5 opportunities between 7am and 11am to head to work
       if random 100 < 14[
         move-to workplace
+        set economic-contributors economic-contributors + 1
       ]
     ]
 
@@ -233,6 +238,7 @@ to travel
       ;; so they are given a 3% chance on 10 opportunities between 7am and 5pm to head to the shops
       if random 100 < 4[
         move-to one-of patches with [pcolor = 114]
+        set economic-contributors economic-contributors + 1
       ]
     ]
   ]
@@ -291,6 +297,11 @@ to update-r0-plot
   set-current-plot "R0 vs. Day"
   set-current-plot-pen "r0"
   plot (((infected-y + infected-today) / infected-y) - 1)
+end
+
+to update-economy
+  set economy round ((economic-contributors / num-people) * 100)
+  set economic-contributors 0
 end
 
 ;; This procedure allows you to run the model multiple times
@@ -380,7 +391,7 @@ num-people
 num-people
 2
 500
-273.0
+500.0
 1
 1
 NIL
@@ -412,7 +423,7 @@ num-infected
 num-infected
 0
 num-people
-19.0
+10.0
 1
 1
 NIL
@@ -500,7 +511,7 @@ employment-rate
 employment-rate
 1
 100
-50.0
+97.0
 1
 1
 NIL
@@ -533,15 +544,26 @@ SLIDER
 105
 180
 138
-sick-leave-threshold
-sick-leave-threshold
+travel-sick-threshold
+travel-sick-threshold
 1
 100
-50.0
+98.0
 1
 1
 NIL
 HORIZONTAL
+
+MONITOR
+305
+300
+385
+345
+NIL
+economy
+17
+1
+11
 
 @#$#@#$#@
 ## ACKNOWLEDGMENT
