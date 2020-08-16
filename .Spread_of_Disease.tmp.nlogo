@@ -271,16 +271,16 @@ to spread-infection
     if infectious? = true[
       ifelse mask? = true[ ;; carrier is wearing a mask...
         ask turtles-here [
-          if mask? = true and random 100 < 20[ ;; ...and contact is too
+          if mask? = true and random 100 < [ ;; ...and contact is too
             set infected? true
           ]
-          if mask? = false and random 100 < 50[ ;; ...but contact is not
+          if mask? = false and random 100 < 5[ ;; ...but contact is not
             set infected? true
           ]
         ]
       ][
         ask turtles-here [ ;; carrier is not wearing a mask...
-          if mask? = true and random 100 < 95[ ;; ...but contact is
+          if mask? = true and random 100 < 70[ ;; ...but contact is
             set infected? true
           ]
           if mask? = false[ ;; ...and neither is contact
@@ -568,7 +568,7 @@ travel-sick-threshold
 travel-sick-threshold
 1
 100
-70.0
+80.0
 1
 1
 NIL
@@ -594,7 +594,22 @@ percentage-masks
 percentage-masks
 0
 100
-95.0
+20.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+200
+150
+385
+183
+mask-effectiveness
+mask-effectiveness
+1
+5
+3.0
 1
 1
 NIL
