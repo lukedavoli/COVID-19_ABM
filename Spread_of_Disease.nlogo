@@ -225,44 +225,47 @@ to update-infection-status
 end
 
 to travel
-  if chance-travel-sick > travel-sick-threshold[
-    if (hours mod 24) >= 7 and (hours mod 24) < 12 and worker? = true[
-      ;; Intention for workers to have a roughly 70% chance of going to work on any given day,
-      ;; so they are given a 14% chance on 5 opportunities between 7am and 11am to head to work
-      if random 100 < 14[
-        move-to workplace
-        set economic-contributors economic-contributors + 1
+  if mask? = True[
+    if chance-travel-sick > travel-sick-threshold[
+      if (hours mod 24) >= 7 and (hours mod 24) < 12 and worker? = true[
+        ;; Intention for workers to have a roughly 70% chance of going to work on any given day,
+        ;; so they are given a 14% chance on 5 opportunities between 7am and 11am to head to work
+        if random 100 < 14[
+          move-to workplace
+          set economic-contributors economic-contributors + 1
+        ]
+      ]
+
+      if (hours mod 24) >= 7 and (hours mod 24) < 17 and worker? = false[
+        ;; Intention for non-workers to have a roughly 40% chance of going to the shops on any given day,
+        ;; so they are given a 3% chance on 10 opportunities between 7am and 5pm to head to the shops
+        if random 100 < 4[
+          move-to one-of patches with [pcolor = 114]
+          set economic-contributors economic-contributors + 1
+        ]
       ]
     ]
 
-    if (hours mod 24) >= 7 and (hours mod 24) < 17 and worker? = false[
-      ;; Intention for non-workers to have a roughly 40% chance of going to the shops on any given day,
-      ;; so they are given a 3% chance on 10 opportunities between 7am and 5pm to head to the shops
-      if random 100 < 4[
+    if pcolor = 104[set hours-worked-today hours-worked-today + 1]
+    if pcolor = 114[set hours-shopped-today hours-shopped-today + 1]
+
+    if pcolor = 104 and hours-worked-today = 6[
+      ;; Intention for workers have a roughly 20% chance of going to the shops after work
+      ifelse random 100 < 20[
         move-to one-of patches with [pcolor = 114]
-        set economic-contributors economic-contributors + 1
+      ][
+        move-to home-patch
       ]
+      set hours-worked-today 0
+
     ]
-  ]
 
-  if pcolor = 104[set hours-worked-today hours-worked-today + 1]
-  if pcolor = 114[set hours-shopped-today hours-shopped-today + 1]
-
-  if pcolor = 104 and hours-worked-today = 6[
-    ;; Intention for workers have a roughly 20% chance of going to the shops after work
-    ifelse random 100 < 20[
-      move-to one-of patches with [pcolor = 114]
-    ][
+    if pcolor = 114 and hours-shopped-today = 3[
       move-to home-patch
+      set hours-shopped-today 0
     ]
-    set hours-worked-today 0
-
   ]
 
-  if pcolor = 114 and hours-shopped-today = 3[
-    move-to home-patch
-    set hours-shopped-today 0
-  ]
 
 end
 
@@ -280,7 +283,7 @@ to spread-infection
         ]
       ][
         ask turtles-here [ ;; carrier is not wearing a mask...
-          if mask? = true and random 100 < 95[ ;; ...but contact is
+          if mask? = true and random 100 < 80[ ;; ...but contact is
             set infected? true
           ]
           if mask? = false[ ;; ...and neither is contact
@@ -594,7 +597,7 @@ percentage-masks
 percentage-masks
 0
 100
-95.0
+70.0
 1
 1
 NIL
