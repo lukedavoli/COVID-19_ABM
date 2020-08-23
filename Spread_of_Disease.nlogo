@@ -182,6 +182,7 @@ end
 
 to go
   if all? turtles [ infected? ] [ stop ]
+  if count turtles with [infected?] = 0 [ stop ]
   spread-infection
   ask turtles [
     travel
@@ -414,7 +415,7 @@ num-people
 num-people
 2
 500
-252.0
+280.0
 1
 1
 NIL
@@ -446,7 +447,7 @@ num-infected
 num-infected
 1
 num-people
-2.0
+1.0
 1
 1
 NIL
@@ -534,7 +535,7 @@ employment-rate
 employment-rate
 1
 100
-60.0
+80.0
 1
 1
 NIL
@@ -571,7 +572,7 @@ travel-sick-threshold
 travel-sick-threshold
 1
 100
-70.0
+50.0
 1
 1
 NIL
@@ -595,9 +596,9 @@ SLIDER
 138
 percentage-masks
 percentage-masks
-0
+30
 100
-70.0
+90.0
 1
 1
 NIL
