@@ -444,9 +444,9 @@ SLIDER
 43
 num-infected
 num-infected
-0
+1
 num-people
-10.0
+2.0
 1
 1
 NIL
