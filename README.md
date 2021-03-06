@@ -1,5 +1,6 @@
-# AOPD Assignment 1: COVID-19 Spread ABM
-Agent-Oriented Programming and Design Assignment 1 requires the creation of an agent-based model in NetLogo for understanding the spread of Coronavirus Disease 19 (COVID-19) in the population.
+# COVID-19 Spread Agent-Based Modelling Simulation
+
+This project was completed as part of the course Agent-Oriented Programming and Design, Semester 2, 2020.
 
 ## Installing NetLogo
 NetLogo may be installed from [here](https://ccl.northwestern.edu/netlogo/download.shtml). Fill out the form with your details and click download, then follow the installation process.
